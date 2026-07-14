@@ -12,8 +12,15 @@ params = {
     "cursor": 0,
     "per_page": 100,
     "dates[]": today,
-    
 }
+start_date = requests.GET.get("start_date")
+end_date = requests.GET.get("end_date")
+team = requests.GET.get("team_name")
+if team:
+    team = team.lower()
+else:
+    team = ""
+
 response = requests.get("https://api.balldontlie.io/v1/games", headers = headers, params = params)
 
 data = response.json()
