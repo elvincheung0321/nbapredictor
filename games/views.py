@@ -15,6 +15,9 @@ def game_listing(request):
     else:
         team = ""
 
+    wins = {}
+    games = []
+
     params = {
         "cursor": 0,
         "per_page": 100,
@@ -22,13 +25,49 @@ def game_listing(request):
         "end_date": end_date,
     }
 
+    while True:
+        response = requests.get("https://api.balldontlie.io/v1/games", headers = headers, params = params)
+        
+        data = response.json()
+        
+        for game in data["data"]:
+            home_team = game["home_team"]["full_name"]
+            visitor_team = game["visitor_team"]["full_name"]
+            if team:
+                home_name = home_team.lower()
+                visitor_name = visitor_team.lower()
+            if team not in home_name and team not in visitor_name:
+                continue
 
-    response = requests.get("https://api.balldontlie.io/v1/games", headers = headers, params = params)
+            home_score = game["home_team_score"]
+            visitor_score = game["visitor_team_score"]
 
-    data = response.json()
+            if home_score > visitor_score:
+                winner = home_team
+                wins[home_team] = wins.get(home_team, 0) + 1
+            elif home_score < visitor_score:
+                winner = visitor_team
+                wins[visitor_team] = wins.get(visitor_team, 0) + 1
+            else:
+                winner = "Draw"
 
-    for game in data["data"]:
-        if team:
-            home_name = game["home_team"]["full_name"].lower()
-            print(home_name)
+            games.append({
+                "date": game["date"],
+                "home_team": home_team,
+                "visitor_team": visitor_team,
+                "visitor_score": visitor_score,
+                "home_score":home_score,
+                "winner": winner,
+                "postseason": game["postseason"],
+                })
+        next_cursor = data.get("meta", {}).get("next_cursor")
+        params["cursor"] = next_cursor
+        if not next_cursor:
+            break
 
+    winning_stats = dict(sorted(wins.items(), key = lambda x: x[1], reverse = True))
+
+    return render(request, "gameListing.html", {
+        "games_list": games,
+        "winning_stats": winning_stats,
+    })
