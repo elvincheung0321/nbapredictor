@@ -20,15 +20,4 @@ data = response.json()
 print(f"Found {len(data['data'])} games for {today}:\n")
 
 for game in data["data"]:
-
-
-
-
-
-
-
-
-
-
-
-
+    break
