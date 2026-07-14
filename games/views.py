@@ -20,12 +20,11 @@ data = response.json()
 print(f"Found {len(data['data'])} games for {today}:\n")
 
 for game in data["data"]:
-    home = game["home_team"]
-    away = game["visitor_team"]
-    score = f"{game['visitor_team_score']}-{game['home_team_score']}"
-    print(f"{away['abbreviation']} @ {home['abbreviation']}: {score} ({game['status']})")
 
-print(data["data"])
+
+
+
+
 
 
 
