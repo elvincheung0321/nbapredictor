@@ -17,57 +17,63 @@ def game_listing(request):
 
     wins = {}
     games = []
+    submit = False
 
-    params = {
-        "cursor": 0,
-        "per_page": 100,
-        "start_date": start_date,
-        "end_date": end_date,
-    }
+    if start_date and end_date:
+        submit = True
 
-    while True:
-        response = requests.get("https://api.balldontlie.io/v1/games", headers = headers, params = params)
-        
-        data = response.json()
-        
-        for game in data["data"]:
-            home_team = game["home_team"]["full_name"]
-            visitor_team = game["visitor_team"]["full_name"]
-            if team:
-                home_name = home_team.lower()
-                visitor_name = visitor_team.lower()
-            if team not in home_name and team not in visitor_name:
-                continue
+        params = {
+            "cursor": 0,
+            "per_page": 100,
+            "start_date": start_date,
+            "end_date": end_date,
+        }
 
-            home_score = game["home_team_score"]
-            visitor_score = game["visitor_team_score"]
+        while True:
+            response = requests.get("https://api.balldontlie.io/v1/games", headers=headers, params=params)
+            if response.status_code != 200:
+                break
+            
+            data = response.json()
+            
+            for game in data["data"]:
+                home_team = game["home_team"]["full_name"]
+                visitor_team = game["visitor_team"]["full_name"]
+                if team:
+                    home_name = home_team.lower()
+                    visitor_name = visitor_team.lower()
+                    if team not in home_name and team not in visitor_name:
+                        continue
 
-            if home_score > visitor_score:
-                winner = home_team
-                wins[home_team] = wins.get(home_team, 0) + 1
-            elif home_score < visitor_score:
-                winner = visitor_team
-                wins[visitor_team] = wins.get(visitor_team, 0) + 1
-            else:
-                winner = "Draw"
+                home_score = game["home_team_score"]
+                visitor_score = game["visitor_team_score"]
 
-            games.append({
-                "date": game["date"],
-                "home_team": home_team,
-                "visitor_team": visitor_team,
-                "visitor_score": visitor_score,
-                "home_score":home_score,
-                "winner": winner,
-                "postseason": game["postseason"],
+                if home_score > visitor_score:
+                    winner = home_team
+                    wins[home_team] = wins.get(home_team, 0) + 1
+                elif home_score < visitor_score:
+                    winner = visitor_team
+                    wins[visitor_team] = wins.get(visitor_team, 0) + 1
+                else:
+                    winner = "Draw"
+
+                games.append({
+                    "date": game["date"],
+                    "home_team": home_team,
+                    "visitor_team": visitor_team,
+                    "visitor_score": visitor_score,
+                    "home_score": home_score,
+                    "winner": winner,
                 })
-        next_cursor = data.get("meta", {}).get("next_cursor")
-        params["cursor"] = next_cursor
-        if not next_cursor:
-            break
+            next_cursor = data.get("meta", {}).get("next_cursor")
+            params["cursor"] = next_cursor
+            if not next_cursor:
+                break
 
     winning_stats = dict(sorted(wins.items(), key = lambda x: x[1], reverse = True))
 
     return render(request, "gameListing.html", {
         "games_list": games,
         "winning_stats": winning_stats,
+        "submit": submit
     })

@@ -2,6 +2,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+    <link rel="stylesheet" href="{% static "css/gameListing.css"%}">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>NBA Games</title>
@@ -19,12 +20,52 @@
         </div>
         <div>
             <label>Team Name: </label>
-            <input type="text" name="team_name" id="team_name" value= "{{ request.GET.team_name }}" required placeholder="Enter team name here">
+            <input type="text" name="team_name" id="team_name" value= "{{ request.GET.team_name }}" placeholder="Enter team name here">
         </div>
-        <div>
-            <button>Find</button>
+        <div id = "button">
+            <button>Filter</button>
         </div>
-        
     </form>
+    {%if submit%}
+        {% if winning_stats %}
+        <h2>Team Wins</h2>
+        <table>
+            <tr>
+                <th>Team</th>
+                <th>Wins</th>
+            </tr>
+            {% for team, score in winning_stats.items %}
+                <tr>
+                    <td>{{ team }}</td>
+                    <td>{{ score }}</td>
+                </tr>
+            {% endfor %}
+        </table>
+        {% endif %}
+
+        {% if games_list %}
+        <h2>Game List</h2>
+        <table>
+            <tr>
+            <th>Date</th>
+            <th>Home</th>
+            <th>Away</th>
+            <th>Home score</th>
+            <th>Away score</th>
+            <th>Winning team</th>
+            </tr>
+            {% for game in games_list %}
+                <tr>
+                <td>{{ game.date }}</td>
+                <td>{{ game.home_team }}</td>
+                <td>{{ game.visitor_team }}</td>
+                <td>{{ game.home_score }}</td>
+                <td>{{ game.visitor_score }}</td>
+                <td>{{ game.winner }}</td>
+                </tr>
+            {% endfor %}
+        </table>
+        {% endif %}
+    {%endif%}
 </body>
 </html>
