@@ -61,3 +61,4 @@ Backups.backupdb
 MobileBackups.trash
 tmbootpicker.efi
 wakatime.cfg
+.env
