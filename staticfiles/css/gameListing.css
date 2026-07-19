@@ -1,0 +1,97 @@
+body{
+    font-family:'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background:rgba(0,0,0,0.7);
+    padding:20px;
+    margin:0;
+    line-height:1.5;
+}
+
+h3 {
+    color: white;
+    text-align:center;
+    margin: 20px 0px;
+    font-weight: normal;
+    font-size:25px;
+}
+
+form{
+    max-width:800px;
+    margin: 30px auto;
+    padding: 30px;
+    background: white;
+    border-radius: 10px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px;
+    justify-content:center;
+}
+
+form > div {
+    flex: 1 1 220px;
+    min-width: 220px;
+}
+
+button {
+    background: #C8102E;
+    color: white;
+    border: 0;
+    font-size: 16px;
+    border-radius: 6px;
+    font-weight:bold;
+    cursor: pointer;
+    padding: 14px 25px;
+    width:200px;
+}
+
+#button{
+    width:100%;
+    text-align:center;
+    flex-basis: 100%;
+}
+
+label{
+    display:block;
+    margin-bottom:5px;
+    font-weight:bold;
+    color: #1d428a
+}
+
+input[type="date"],input[type="text"] {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 12px 15px;
+    border-radius: 6px;
+    font-size: 16px;
+}
+
+h2{
+    color:white;
+    text-align:center;
+    font-size:30px;
+    /* margin: 35px 0 20px; */
+}
+
+table{
+    width: 100%;
+    border-collapse: collapse;
+    margin: 25px 0;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.15);
+    background: rgba(255, 255, 255, 0.95);
+    border-radius: 8px;
+    overflow: hidden;
+
+}
+
+th, td {
+    padding: 14px 16px;
+    text-align: left;
+    border-bottom: 1px solid #eaeaea;
+}
+
+th {
+    background-color: #1d428a;
+    color: black;
+    font-weight: 600;
+    text-transform: uppercase;
+    font-size: 0.9rem;
+}

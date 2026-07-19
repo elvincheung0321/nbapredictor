@@ -20,70 +20,65 @@ def game_listing(request):
     wins = {}
     games = []
     submit = False
+    error = None
 
     if start_date and end_date:
         submit = True
 
-        # params = {
-        #     "cursor": 0,
-        #     "per_page": 100,
-        #     "start_date": start_date,
-        #     "end_date": end_date,
-        # }
+        try:
+            game = leaguegamefinder.LeagueGameFinder(
+                date_from_nullable=start_date, 
+                date_to_nullable=end_date,
+                timeout=60
+            )
 
-        # while True:
-        game = leaguegamefinder.LeagueGameFinder(date_from_nullable=start_date, date_to_nullable=end_date)
+            df1 = game.get_data_frames()[0].sort_values("GAME_ID").reset_index().drop("index", axis=1)
+            home_game = df1[df1["MATCHUP"].str.contains("@")].reset_index().drop("index", axis=1)
+            away_game = df1[-df1["MATCHUP"].str.contains("@")].reset_index().drop("index", axis=1)
+            data = pd.merge(home_game, away_game, on=["GAME_ID", "GAME_DATE", "SEASON_ID"], suffixes=["_H","_A"])
+            
+            for i, game in data.iterrows():
+                home_team = game["TEAM_NAME_H"]
+                home_ab = game["TEAM_ABBREVIATION_A"]
+                visitor_ab = game["TEAM_ABBREVIATION_H"]
+                visitor_team = game["TEAM_NAME_A"]
+                if team:
+                    home_name = home_team.lower()
+                    visitor_name = visitor_team.lower()
+                    if team not in home_name and team not in visitor_name and team not in home_ab and team not in visitor_ab:
+                        continue
 
-        # df = game.get_data_frames()[0]
-        # df2 = df.sort_values("GAME_ID").reset_index()   
-        
-        df1 = game.get_data_frames()[0].sort_values("GAME_ID").reset_index().drop("index", axis=1)
-        home_game = df1[df1["MATCHUP"].str.contains("@")].reset_index().drop("index", axis=1)
-        away_game = df1[-df1["MATCHUP"].str.contains("@")].reset_index().drop("index", axis=1)
-        data = pd.merge(home_game, away_game, on=["GAME_ID", "GAME_DATE", "SEASON_ID"], suffixes=["_H","_A"])
+                home_score = game["PTS_H"]
+                visitor_score = game["PTS_A"]
 
-        # data = data.drop("index", axis=1)
-        
-        for i, game in data.iterrows():
-            home_team = game["TEAM_NAME_H"]
-            home_ab = game["TEAM_ABBREVIATION_A"]
-            visitor_ab = game["TEAM_ABBREVIATION_H"]
-            visitor_team = game["TEAM_NAME_A"]
-            if team:
-                home_name = home_team.lower()
-                visitor_name = visitor_team.lower()
-                if team not in home_name and team not in visitor_name and team not in home_ab and team not in visitor_ab:
-                    continue
+                if home_score > visitor_score:
+                    winner = home_team
+                    wins[home_team] = wins.get(home_team, 0) + 1
+                elif home_score < visitor_score:
+                    winner = visitor_team
+                    wins[visitor_team] = wins.get(visitor_team, 0) + 1
+                else:
+                    winner = "Draw"
 
-            home_score = game["PTS_H"]
-            visitor_score = game["PTS_A"]
+                games.append({
+                    "date": game["GAME_DATE"],
+                    "home_team": home_team,
+                    "visitor_team": visitor_team,
+                    "visitor_score": visitor_score,
+                    "home_score": home_score,
+                    "winner": winner,
+                })
 
-            if home_score > visitor_score:
-                winner = home_team
-                wins[home_team] = wins.get(home_team, 0) + 1
-            elif home_score < visitor_score:
-                winner = visitor_team
-                wins[visitor_team] = wins.get(visitor_team, 0) + 1
-            else:
-                winner = "Draw"
-
-            games.append({
-                "date": game["GAME_DATE"],
-                "home_team": home_team,
-                "visitor_team": visitor_team,
-                "visitor_score": visitor_score,
-                "home_score": home_score,
-                "winner": winner,
-            })
-            # next_cursor = data.get("meta", {}).get("next_cursor")
-            # params["cursor"] = next_cursor
-            # if not next_cursor:
-            #     break
+        except Exception as e:
+            error = f"Failed to fetch NBA data: {str(e)}"
+            games = []
+            wins = {}
 
     winning_stats = dict(sorted(wins.items(), key = lambda x: x[1], reverse = True))
 
     return render(request, "gameListing.html", {
         "games_list": games,
         "winning_stats": winning_stats,
-        "submit": submit
+        "submit": submit,
+        "error": error,
     })
