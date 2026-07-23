@@ -32,7 +32,13 @@
             <strong>Error:</strong> {{ error }}
         </div>
     {% endif %}
+    {%if limit%}
+        <div style = "text-align: center">
+            <b>Loading API data...</b>
+        </div>
+    {%endif%}
     {%if submit%}
+
         {% if winning_stats %}
         <h2>Team Wins</h2>
         <table>
