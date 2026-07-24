@@ -28,10 +28,24 @@ STATIC_DIR = BASE_DIR / "hub" / "static"
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', 'django-insecure-4_=2kx9qsh=-3fc+9_4s)k#aws%uy*yr+5zp69vbh8!$78o0-$')
 
-# SECURITY WARNING: don't run with debug turned on in production!
+# SECURITY WARNING: don't run swith debug turned on in production!
 DEBUG = os.environ.get('DEBUG', 'False') == 'True'
 
-ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',')
+ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', 'localhost,127.0.0.1,.vercel.app').split(',')
+
+if os.environ.get('VERCEL_ENV'):
+    DATABASES = {
+        'default': dj_database_url.config(
+            default=os.environ.get('DATABASE_URL')
+        )
+    }
+else:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / 'db.sqlite3',
+        }
+    }
 
 
 # Application definition

@@ -3,42 +3,38 @@
 <html lang="en">
 <head>
     <link rel="stylesheet" href="{% static 'libraries/bootstrap.min.css' %}">
-    <link rel="stylesheet" href="{% static "css/gameListing.css"%}">
+    <link rel="stylesheet" href="{% static "css/gameListing.css" %}">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>NBA Games</title>
 </head>
 <body>
-    <h3>Enter start dates, end dates and team names to find the respective data (summer league data is not included)</h3>
-    <form method = "GET">
+    <h3>Enter start dates, end dates and team names to find the respective data</h3>
+    <h3>The model has an accuracy of {{accuracy}}%, tested on data from the 2025-26 NBA season</h3>
+
+    <form method="GET" id="filterForm">
         <div>
-            <label>Start Date: </label>
-            <input type="date" name="start_date" id="start_date" value= "{{ request.GET.start_date }}" required>
+            <label>Start Date:</label>
+            <input type="date" name="start_date" id="start_date" value="{{ request.GET.start_date }}" required>
         </div>
         <div>
-            <label>End Date: </label>
-            <input type="date" name="end_date" id="end_date" value= "{{ request.GET.end_date }}" required>
+            <label>End Date:</label>
+            <input type="date" name="end_date" id="end_date" value="{{ request.GET.end_date }}" required>
         </div>
         <div>
-            <label>Team Name: </label>
-            <input type="text" name="team_name" id="team_name" value= "{{ request.GET.team_name }}" placeholder="Enter team name here">
+            <label>Team Name:</label>
+            <input type="text" name="team_name" id="team_name" value="{{ request.GET.team_name }}" placeholder="Enter team name here">
         </div>
-        <div id = "button">
-            <button>Filter</button>
+        <div id="button">
+            <button type="submit" class="btn-filter">Filter</button>
         </div>
     </form>
-    {% if error %}
-        <div style="color: red; background-color: #ffeeee; padding: 10px; margin: 10px 0; border: 1px solid red; border-radius: 4px;">
-            <strong>Error:</strong> {{ error }}
-        </div>
-    {% endif %}
-    {%if limit%}
-        <div style = "text-align: center">
-            <b>Loading API data...</b>
-        </div>
-    {%endif%}
-    {%if submit%}
 
+    {% if error %}
+        <div class="error-box">{{ error }}</div>
+    {% endif %}
+
+    {% if submit %}
         {% if winning_stats %}
         <h2>Team Wins</h2>
         <table>
@@ -53,32 +49,95 @@
                 </tr>
             {% endfor %}
         </table>
-        {% endif %} 
+        {% endif %}
 
         {% if games_list %}
         <h2>Game List</h2>
         <table>
-            <tr>
-            <th>Date</th>
-            <th>Home</th>
-            <th>Away</th>
-            <th>Home score</th>
-            <th>Away score</th>
-            <th>Winning team</th>
-            </tr>
-            {% for game in games_list %}
                 <tr>
-                <td>{{ game.date }}</td>
-                <td>{{ game.home_team }}</td>
-                <td>{{ game.visitor_team }}</td>
-                <td>{{ game.home_score }}</td>
-                <td>{{ game.visitor_score }}</td>
-                <td>{{ game.winner }}</td>
+                    <th>Date</th>
+                    <th>Home</th>
+                    <th>Away</th>
+                    <th>Home score</th>
+                    <th>Away score</th>
+                    <th>Winning team</th>
+                    <th>Prediction</th>
+                    <th>Predict</th>
                 </tr>
-            {% endfor %}
+                {% for game in games_list %}
+                <tr>
+                    <td>{{ game.date }}</td>
+                    <td>{{ game.home_team }}</td>
+                    <td>{{ game.visitor_team }}</td>
+                    <td>{{ game.home_score }}</td>
+                    <td>{{ game.visitor_score }}</td>
+                    <td>{{ game.winner }}</td>
+                    <td id="prediction-{{ forloop.counter0 }}" style="text-align: center; font-weight: bold; color: #C8102E;">
+                        {% if game.predicted_winner %}
+                            {{ game.predicted_winner }}
+                        {% else %}
+                            -
+                        {% endif %}
+                    </td>
+                    <td style="text-align: center;">
+                        {% if game.can_predict %}
+                        <button type="button" class="btn-predict predict-btn" data-game-idx="{{ forloop.counter0 }}">Predict</button>
+                        {% else %}
+                        <p>N/A</p>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
         </table>
         {% endif %}
-    {%endif%}
+    {% endif %}
 
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            var predictButtons = document.querySelectorAll('.predict-btn');
+            
+            predictButtons.forEach(function(button) {
+                button.addEventListener('click', function() {
+                    var gameIdx = this.dataset.gameIdx;
+                    var startDate = document.getElementById('start_date').value;
+                    var endDate = document.getElementById('end_date').value;
+                    var teamName = document.getElementById('team_name').value;
+                    
+                    var url = '/predict/?';
+                    url += 'start_date=' + encodeURIComponent(startDate);
+                    url += '&end_date=' + encodeURIComponent(endDate);
+                    url += '&team_name=' + encodeURIComponent(teamName);
+                    url += '&game_idx=' + encodeURIComponent(gameIdx);
+                    
+                    var predictionCell = document.getElementById('prediction-' + gameIdx);
+                    button.disabled = true;
+                    button.textContent = 'Loading...';
+                    
+                    fetch(url)
+                        .then(function(response) {
+                            return response.json();
+                        })
+                        .then(function(data) {
+                            if (data.success) {
+                                predictionCell.textContent = data.predicted_winner;
+                                predictionCell.style.color = '#C8102E';
+                            } else {
+                                predictionCell.textContent = 'Error';
+                                predictionCell.style.color = 'red';
+                            }
+                            button.textContent = 'Predict';
+                            button.disabled = false;
+                        })
+                        .catch(function(error) {
+                            console.error('Error:', error);
+                            predictionCell.textContent = 'Error';
+                            predictionCell.style.color = 'red';
+                            button.textContent = 'Predict';
+                            button.disabled = false;
+                        });
+                });
+            });
+        });
+    </script>
 </body>
 </html>

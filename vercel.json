@@ -1,0 +1,19 @@
+{
+    "builds": [
+        {
+            "src": "nbapredictor/wsgi.py",
+            "use": "@vercel/python",
+            "config": { "maxLambdaSize": "15mb" }
+        }
+    ],
+    "routes": [
+        {
+            "src": "/static/(.*)",
+            "dest": "/staticfiles/$1"
+        },
+        {
+            "src": "/(.*)",
+            "dest": "nbapredictor/wsgi.py"
+        }
+    ]
+}

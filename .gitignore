@@ -62,3 +62,41 @@ MobileBackups.trash
 tmbootpicker.efi
 wakatime.cfg
 .env
+
+# Python
+venv/
+env/
+ENV/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+
+# Django
+db.sqlite3
+*.log
+staticfiles/
+media/
+
+# Jupyter
+.ipynb_checkpoints/
+*.ipynb
+
+# Data files
+*.csv
+*.pkl
+*.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Vercel
+.vercel/
+
+# Testing
+testing.py
+test.py
