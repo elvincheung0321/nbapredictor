@@ -8,12 +8,19 @@ import pandas as pd
 import joblib
 import numpy as np
 from datetime import datetime
+import logging
 
+logger = logging.getLogger(__name__)
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-
 MODEL_PATH = os.path.join(BASE_DIR, "model", "nba_model.pkl")
 CSV_PATH = os.path.join(BASE_DIR, "2025_26_games.csv")
+
+logger.info(f"BASE_DIR: {BASE_DIR}")
+logger.info(f"MODEL_PATH: {MODEL_PATH}")
+logger.info(f"CSV_PATH: {CSV_PATH}")
+logger.info(f"Model exists? {os.path.exists(MODEL_PATH)}")
+logger.info(f"CSV exists? {os.path.exists(CSV_PATH)}")
 
 FEATURES = [
     "home_avg_points",
@@ -26,13 +33,57 @@ FEATURES = [
     "home_avg_difference",
 ]
 
-model = joblib.load(MODEL_PATH)
-df = pd.read_csv(CSV_PATH)
+_model = None
+_df = None
+_accuracy = None
 
-X = df[FEATURES]
-y = df["home_win"]
-accuracy = round((model.score(X, y) * 100), 1)
+def get_model():
+    global _model
+    if _model is None:
+        try:
+            if os.path.exists(MODEL_PATH):
+                _model = joblib.load(MODEL_PATH)
+                logger.info("Model loaded successfully")
+            else:
+                logger.error(f"Model file NOT FOUND at {MODEL_PATH}")
+                _model = None
+        except Exception as e:
+            logger.error(f"Error loading model: {e}", exc_info=True)
+            _model = None
+    return _model
 
+def get_dataframe():
+    global _df
+    if _df is None:
+        try:
+            if os.path.exists(CSV_PATH):
+                _df = pd.read_csv(CSV_PATH)
+                logger.info("CSV loaded successfully")
+            else:
+                logger.error(f"CSV file NOT FOUND at {CSV_PATH}")
+                _df = None
+        except Exception as e:
+            logger.error(f"Error loading CSV: {e}", exc_info=True)
+            _df = None
+    return _df
+
+def get_accuracy():
+    global _accuracy
+    if _accuracy is None:
+        model = get_model()
+        df = get_dataframe()
+        if model is not None and df is not None:
+            try:
+                X = df[FEATURES]
+                y = df["home_win"]
+                _accuracy = round((model.score(X, y) * 100), 1)
+                logger.info(f"Accuracy calculated: {_accuracy}%")
+            except Exception as e:
+                logger.error(f"Error calculating accuracy: {e}", exc_info=True)
+                _accuracy = "N/A"
+        else:
+            _accuracy = "N/A"
+    return _accuracy
 
 def game_listing(request):
     api_key = os.environ.get("BALLDONTLIE_API_KEY")
@@ -47,6 +98,7 @@ def game_listing(request):
     submit = False
     error = None
 
+    accuracy = get_accuracy()
 
     if start_date and end_date:
         submit = True
@@ -81,7 +133,12 @@ def game_listing(request):
 
             try:
                 while True:
-                    response = requests.get("https://api.balldontlie.io/v1/games", headers=headers, params=params, timeout=60)
+                    response = requests.get(
+                        "https://api.balldontlie.io/v1/games",
+                        headers=headers,
+                        params=params,
+                        timeout=60
+                    )
 
                     if response.status_code == 429:
                         time.sleep(10)
@@ -136,7 +193,6 @@ def game_listing(request):
                         break
                     params["cursor"] = next_cursor
 
-
             except Exception as e:
                 error = f"Error: {e}"
 
@@ -157,7 +213,7 @@ def game_listing(request):
 
     winning_stats = dict(sorted(wins.items(), key=lambda x: x[1], reverse=True))
 
-    return render(request, "gameListing.html", {
+    context = {
         "games_list": games,
         "winning_stats": winning_stats,
         "submit": submit,
@@ -166,8 +222,9 @@ def game_listing(request):
         "end_date": end_date,
         "team": team,
         "accuracy": accuracy,
-    })
-
+        "model_available": get_model() is not None and get_dataframe() is not None,
+    }
+    return render(request, "gameListing.html", context)
 
 def predict(request):
     try:
@@ -178,16 +235,27 @@ def predict(request):
         cache_key = f"nba_games_{start_date}_{end_date}_{team}"
         cached_data = cache.get(cache_key)
 
-        games = cached_data.get("games", [])
+        if not cached_data:
+            return JsonResponse({"error": "Game data not found in cache"}, status=404)
 
+        games = cached_data.get("games", [])
         idx = int(game_idx)
         game = games[idx]
-        csv_row = None
 
+        df = get_dataframe()
+        model = get_model()
+
+        if df is None or model is None:
+            return JsonResponse({"error": "Model or data not available"}, status=503)
+
+        csv_row = None
         for i, row in df.iterrows():
             if row["date"] == game["date"] and row["home_name"] == game["home_team"] and row["visitor_name"] == game["visitor_team"]:
                 csv_row = row
                 break
+
+        if csv_row is None:
+            return JsonResponse({"error": "Game data not found in CSV"}, status=404)
 
         features = np.array([[
             csv_row["home_avg_points"],
@@ -215,4 +283,5 @@ def predict(request):
         })
 
     except Exception as e:
-        return JsonResponse({"error": e})
+        logger.error(f"Prediction error: {e}", exc_info=True)
+        return JsonResponse({"error": str(e)}, status=500)
