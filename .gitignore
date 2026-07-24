@@ -99,4 +99,4 @@ media/
 
 # Testing
 testing.py
-test.py
+test.py*.ipynb
